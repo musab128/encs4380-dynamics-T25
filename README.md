@@ -4,10 +4,10 @@
 This project is an interactive website that helps students understand the dynamic characteristics of sensors using sliders and graphs.
 
 ## Team Members
-- Member 1: Aws Abdallah
-- Member 2: Musab Farhat
-- Member 3: Mohammad Abdallah
-- Member 4: Ahmad Bazzar
+- Member 1: Aws Abdallah 1230619
+- Member 2: Musab Farhat 1230093
+- Member 3: Mohammad Abdallah 1230096
+- Member 4: Ahmad Bazzar 1230575
 
 **Module 1: First-Order Time Response**
 - Step and Ramp responses
