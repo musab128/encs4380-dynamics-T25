@@ -24,4 +24,5 @@ Technologies Used
 - Plotly.js
   
 AI Usage
-- claude was used to assist with code development, explanations, and debugging.
+
+claude was used to assist with code development, explanations, and debugging.
