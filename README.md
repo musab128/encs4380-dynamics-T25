@@ -3,10 +3,10 @@ Project Description
 This project is an interactive website that helps students understand the dynamic characteristics of sensors using sliders and graphs.
 
 Team Members
-Member 1: Aws Abdallah 1230619
-Member 2: Musab Farhat 1230093
-Member 3: Mohammad Abdallah 1230096
-Member 4: Ahmad Bazzar 1230575
+- Member 1: Aws Abdallah 1230619
+- Member 2: Musab Farhat 1230093
+- Member 3: Mohammad Abdallah 1230096
+- Member 4: Ahmad Bazzar 1230575
 
 ## Modules
 - **Module 1 – First-Order Time Response:** Step/ramp inputs, K and τ sliders, 63.2% at τ, approximately 95% at 3τ, steady-state ramp error, logarithmic error fraction, prediction question, validation.
