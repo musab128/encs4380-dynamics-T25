@@ -17,9 +17,9 @@ Live Website
 [https://musab128.github.io/encs4380-dynamics-T25/]
 
 Technologies Used
-HTML
-CSS
-JavaScript
-Plotly.js
+- **HTML
+- **CSS
+- **JavaScript
+- **Plotly.js
 AI Usage
-claude was used to assist with code development, explanations, and debugging.
+- **claude was used to assist with code development, explanations, and debugging.
