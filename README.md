@@ -14,6 +14,7 @@ Team Members
 - **Module 3 – Second-Order Response:** Mass-spring-damper controls m, b, k, three damping regimes, rise/peak/settling times, overshoot, s-plane poles, live A/B matrices and eigenvalues, phase-plane trajectory, prediction question, validation.
 
 Live Website
+
 [https://musab128.github.io/encs4380-dynamics-T25/]
 
 Technologies Used
@@ -21,5 +22,6 @@ Technologies Used
 - CSS
 - JavaScript
 - Plotly.js
+  
 AI Usage
 - claude was used to assist with code development, explanations, and debugging.
