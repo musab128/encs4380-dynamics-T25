@@ -1,0 +1,475 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Module 4 | Guess the Sensor</title>
+<link rel="stylesheet" href="shared.css">
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+</head>
+<body>
+<main>
+<nav class="nav">
+<a href="index.html">Home</a>
+<a href="module1.html">Module 1</a>
+<a href="module2.html">Module 2</a>
+<a href="module3.html">Module 3</a>
+<a href="module4.html" class="active">Module 4</a>
+</nav>
+
+<header>
+<div class="eyebrow">ENCS4380 · DYNAMIC CHARACTERISTICS TOOLKIT</div>
+<h1>Module 4: Guess the Sensor</h1>
+<p>Analyze the measured response, estimate the hidden system parameters, and test your understanding of sensor dynamics.</p>
+</header>
+
+<div class="two">
+<section class="card">
+<h2>Your challenge</h2>
+<div class="metrics">
+<div class="metric"><span>Hidden system</span><strong id="systemType">—</strong></div>
+<div class="metric"><span>Input signal</span><strong id="inputType">—</strong></div>
+<div class="metric"><span>Frequency</span><strong id="frequency">—</strong></div>
+</div>
+<p id="challengeDescription" class="hint">Study the measured response and estimate its parameters.</p>
+<div class="row" style="margin-top:14px">
+<button id="hintButton">Show hint</button>
+<button id="newButton">New Sensor</button>
+</div>
+<div id="hintText" class="result" hidden></div>
+</section>
+
+<section class="card">
+<h2>Session score</h2>
+<div class="metrics">
+<div class="metric"><span>Total points</span><strong id="score">0</strong></div>
+<div class="metric"><span>Challenges checked</span><strong id="attempts">0</strong></div>
+<div class="metric"><span>Perfect guesses</span><strong id="perfect">0</strong></div>
+</div>
+<p class="hint">You can earn 100 points for estimating both parameters within 10% of their actual values.</p>
+</section>
+</div>
+
+<section class="card">
+<h2>Measured sensor response</h2>
+<p>The measured data contains a small amount of noise. Use the graph to estimate the hidden parameters.</p>
+<div id="sensorPlot" class="plot"></div>
+<p class="hint" id="plotNote"></p>
+</section>
+
+<div class="grid">
+<section class="card">
+<h2>Your parameter estimates</h2>
+<div id="firstInputs">
+<div class="control">
+<label class="control-label" for="guessK">Estimated gain (K)</label>
+<input type="number" id="guessK" min="0.01" max="20" step="0.01" value="1">
+</div>
+<div class="control">
+<label class="control-label" for="guessTau">Estimated time constant (τ) in seconds</label>
+<input type="number" id="guessTau" min="0.01" max="50" step="0.01" value="1">
+</div>
+</div>
+
+<div id="secondInputs" hidden>
+<div class="control">
+<label class="control-label" for="guessZeta">Estimated damping ratio (ζ)</label>
+<input type="number" id="guessZeta" min="0.01" max="3" step="0.01" value="0.5">
+</div>
+<div class="control">
+<label class="control-label" for="guessWn">Estimated natural frequency (ωₙ) in rad/s</label>
+<input type="number" id="guessWn" min="0.01" max="30" step="0.01" value="2">
+</div>
+</div>
+
+<div class="row" style="margin-top:20px">
+<button id="checkButton">Check Answer</button>
+</div>
+<div id="feedback" class="result" aria-live="polite">Enter your estimates, then click Check Answer.</div>
+</section>
+
+<section class="card">
+<h2>Answer comparison</h2>
+<div id="comparison" class="metrics">
+<div class="metric"><span>First parameter</span><strong>—</strong></div>
+<div class="metric"><span>Second parameter</span><strong>—</strong></div>
+<div class="metric"><span>Your points</span><strong>—</strong></div>
+</div>
+<div id="comparisonPlot" class="plot"></div>
+</section>
+</div>
+
+<section class="card">
+<h2>How to estimate the parameters</h2>
+<div id="firstMethod">
+<p><strong>First-order system:</strong></p>
+<div class="math">
+y(t) = K(1 − e<sup>−t/τ</sup>)
+<br>
+At t = τ, the output reaches approximately 63.2% of its final value.
+</div>
+<p>Estimate K from the final output value, and estimate τ from the time at which the output reaches 63.2% of that value.</p>
+</div>
+<div id="secondMethod" hidden>
+<p><strong>Second-order system:</strong></p>
+<div class="math">
+M<sub>p</sub> = e<sup>−ζπ/√(1−ζ²)</sup>
+<br>
+t<sub>p</sub> = π / (ω<sub>n</sub>√(1−ζ²))
+</div>
+<p>For an underdamped step response, estimate ζ using the percentage overshoot, then estimate ωₙ using the peak time.</p>
+</div>
+</section>
+
+<footer>
+<p>ENCS4380 · Dynamic Characteristics Interactive Toolkit</p>
+</footer>
+</main>
+
+<script>
+'use strict';
+
+const $ = id => document.getElementById(id);
+const config = {
+ responsive:true,
+ displaylogo:false,
+ modeBarButtonsToRemove:['lasso2d','select2d']
+};
+
+const palette = {
+ paper:'#162238',
+ grid:'#34445a',
+ font:'#ecf3ff'
+};
+
+let challenge = null;
+let totalScore = 0;
+let attempts = 0;
+let perfect = 0;
+let checked = false;
+
+const fmt = (n,d=3) => Number(n).toFixed(d);
+
+function randomBetween(min,max) {
+ return min + Math.random()*(max-min);
+}
+
+function base(xTitle,yTitle) {
+ return {
+  paper_bgcolor:palette.paper,
+  plot_bgcolor:palette.paper,
+  font:{color:palette.font,size:12},
+  margin:{l:65,r:25,t:20,b:60},
+  xaxis:{title:xTitle,gridcolor:palette.grid},
+  yaxis:{title:yTitle,gridcolor:palette.grid},
+  legend:{orientation:'h',y:-0.3,x:0},
+  hovermode:'closest'
+ };
+}
+
+function firstStep(K,tau,t) {
+ return K*(1-Math.exp(-t/tau));
+}
+
+function secondStep(zeta,wn,t) {
+ if(t<=0) return 0;
+
+ if(zeta<0.999999) {
+  const wd=wn*Math.sqrt(1-zeta*zeta);
+  const a=zeta*wn;
+  return 1-Math.exp(-a*t)*
+   (Math.cos(wd*t)+(a/wd)*Math.sin(wd*t));
+ }
+
+ if(Math.abs(zeta-1)<=0.000001) {
+  return 1-Math.exp(-wn*t)*(1+wn*t);
+ }
+
+ const d=wn*Math.sqrt(zeta*zeta-1);
+ const r1=-zeta*wn+d;
+ const r2=-zeta*wn-d;
+
+ return 1-(r1*Math.exp(r2*t)-r2*Math.exp(r1*t))/(r1-r2);
+}
+
+function firstSine(K,tau,w,t) {
+ const amplitude=K/Math.sqrt(1+Math.pow(w*tau,2));
+ const phase=-Math.atan(w*tau);
+ return amplitude*Math.sin(w*t+phase);
+}
+
+function secondSine(zeta,wn,w,t) {
+ const denominator=Math.sqrt(
+  Math.pow(wn*wn-w*w,2)+
+  Math.pow(2*zeta*wn*w,2)
+ );
+
+ const amplitude=wn*wn/denominator;
+ const phase=-Math.atan2(
+  2*zeta*wn*w,
+  wn*wn-w*w
+ );
+
+ return amplitude*Math.sin(w*t+phase);
+}
+
+function trueResponse(c,t) {
+ if(c.type==='first') {
+  return c.signal==='step'
+   ? firstStep(c.K,c.tau,t)
+   : firstSine(c.K,c.tau,c.w,t);
+ }
+
+ return c.signal==='step'
+  ? secondStep(c.zeta,c.wn,t)
+  : secondSine(c.zeta,c.wn,c.w,t);
+}
+
+function guessedResponse(c,t) {
+ if(c.type==='first') {
+  const K=+$('guessK').value;
+  const tau=+$('guessTau').value;
+
+  if(!Number.isFinite(K)||!Number.isFinite(tau)||K<=0||tau<=0)
+   return NaN;
+
+  return c.signal==='step'
+   ? firstStep(K,tau,t)
+   : firstSine(K,tau,c.w,t);
+ }
+
+ const zeta=+$('guessZeta').value;
+ const wn=+$('guessWn').value;
+
+ if(!Number.isFinite(zeta)||!Number.isFinite(wn)||zeta<=0||wn<=0)
+  return NaN;
+
+ return c.signal==='step'
+  ? secondStep(zeta,wn,t)
+  : secondSine(zeta,wn,c.w,t);
+}
+
+function createChallenge() {
+ const type=Math.random()<0.5?'first':'second';
+ const signal=Math.random()<0.75?'step':'sine';
+
+ const c={
+  type,
+  signal,
+  w:signal==='sine'?randomBetween(0.7,2.5):null,
+  K:type==='first'?randomBetween(0.7,3.5):1,
+  tau:type==='first'?randomBetween(0.4,3.5):null,
+  zeta:type==='second'?randomBetween(0.18,0.85):null,
+  wn:type==='second'?randomBetween(1.5,5):null
+ };
+
+ return c;
+}
+
+function makeNewChallenge() {
+ challenge=createChallenge();
+ checked=false;
+
+ $('systemType').textContent=
+  challenge.type==='first'?'First-Order':'Second-Order';
+
+ $('inputType').textContent=
+  challenge.signal==='step'?'Step':'Sine';
+
+ $('frequency').textContent=
+  challenge.signal==='sine'?fmt(challenge.w,2)+' rad/s':'Not applicable';
+
+ $('challengeDescription').textContent=
+  challenge.signal==='step'
+   ? 'A step input was applied. Estimate the system parameters from its measured response.'
+   : 'A sine input was applied. The input angular frequency is given above. Estimate the hidden parameters.';
+
+ $('firstInputs').hidden=challenge.type!=='first';
+ $('secondInputs').hidden=challenge.type!=='second';
+ $('firstMethod').hidden=challenge.type!=='first';
+ $('secondMethod').hidden=challenge.type!=='second';
+
+ $('hintText').hidden=true;
+ $('hintText').textContent='';
+
+ $('feedback').textContent=
+  'Study the measured response and enter your estimates.';
+
+ $('comparison').innerHTML=
+  '<div class="metric"><span>First parameter</span><strong>—</strong></div>'+
+  '<div class="metric"><span>Second parameter</span><strong>—</strong></div>'+
+  '<div class="metric"><span>Your points</span><strong>—</strong></div>';
+
+ $('comparisonPlot').innerHTML='';
+
+ $('plotNote').textContent=
+  challenge.signal==='step'
+   ? 'Input: unit step. The displayed points are noisy measurements.'
+   : 'Input: sine wave. Its angular frequency is provided above. The displayed points are noisy measurements.';
+
+ drawMeasuredResponse();
+}
+
+function drawMeasuredResponse() {
+ const c=challenge;
+ const horizon=c.signal==='step'
+  ? (c.type==='first'?c.tau*5:8/c.wn)
+  : 6*2*Math.PI/c.w;
+
+ const count=240;
+ const times=Array.from({length:count+1},(_,i)=>horizon*i/count);
+ const actual=times.map(t=>trueResponse(c,t));
+
+ const maxValue=Math.max(...actual.map(Math.abs),0.1);
+ const noiseLevel=maxValue*0.012;
+
+ const measured=actual.map(y=>
+  y+(Math.random()*2-1)*noiseLevel
+ );
+
+ Plotly.react(
+  'sensorPlot',
+  [{
+   x:times,
+   y:measured,
+   mode:'markers',
+   name:'Measured sensor data',
+   marker:{color:'#ffbd6e',size:5}
+  }],
+  base('Time (s)','Sensor output'),
+  config
+ );
+}
+
+function relativeError(guess,actual) {
+ return Math.abs(guess-actual)/Math.abs(actual)*100;
+}
+
+function checkAnswer() {
+ if(checked) {
+  $('feedback').textContent=
+   'This challenge has already been checked. Click New Sensor to continue.';
+  return;
+ }
+
+ let guess1,guess2,actual1,actual2,name1,name2;
+
+ if(challenge.type==='first') {
+  guess1=+$('guessK').value;
+  guess2=+$('guessTau').value;
+  actual1=challenge.K;
+  actual2=challenge.tau;
+  name1='K';
+  name2='τ';
+ } else {
+  guess1=+$('guessZeta').value;
+  guess2=+$('guessWn').value;
+  actual1=challenge.zeta;
+  actual2=challenge.wn;
+  name1='ζ';
+  name2='ωₙ';
+ }
+
+ if(!Number.isFinite(guess1)||!Number.isFinite(guess2)||
+    guess1<=0||guess2<=0) {
+  $('feedback').textContent=
+   'Please enter valid positive numbers for both parameters.';
+  return;
+ }
+
+ const error1=relativeError(guess1,actual1);
+ const error2=relativeError(guess2,actual2);
+
+ const correct1=error1<=10;
+ const correct2=error2<=10;
+
+ const points=(correct1?50:0)+(correct2?50:0);
+
+ totalScore+=points;
+ attempts++;
+
+ if(points===100) perfect++;
+
+ checked=true;
+
+ $('score').textContent=totalScore;
+ $('attempts').textContent=attempts;
+ $('perfect').textContent=perfect;
+
+ $('feedback').innerHTML=
+  `<strong>${points===100?'Excellent!':points===50?'Partially correct!':'Try again on the next sensor!'}</strong>
+  <p>${name1} error: ${fmt(error1,2)}% — ${correct1?'Within 10%':'Outside 10%'}</p>
+  <p>${name2} error: ${fmt(error2,2)}% — ${correct2?'Within 10%':'Outside 10%'}</p>
+  <p>You earned <strong>${points}/100</strong> points.</p>`;
+
+ $('comparison').innerHTML=
+  `<div class="metric"><span>Actual ${name1}</span><strong>${fmt(actual1,3)}</strong></div>
+   <div class="metric"><span>Actual ${name2}</span><strong>${fmt(actual2,3)}</strong></div>
+   <div class="metric"><span>Your points</span><strong>${points}/100</strong></div>`;
+
+ drawComparison(guess1,guess2);
+}
+
+function drawComparison(guess1,guess2) {
+ const c=challenge;
+
+ const horizon=c.signal==='step'
+  ? (c.type==='first'?c.tau*5:8/c.wn)
+  : 6*2*Math.PI/c.w;
+
+ const count=300;
+ const times=Array.from({length:count+1},(_,i)=>horizon*i/count);
+
+ const actual=times.map(t=>trueResponse(c,t));
+ const guessed=times.map(t=>guessedResponse(c,t));
+
+ Plotly.react(
+  'comparisonPlot',
+  [
+   {
+    x:times,
+    y:actual,
+    mode:'lines',
+    name:'Actual response',
+    line:{color:'#42dbbe',width:3}
+   },
+   {
+    x:times,
+    y:guessed,
+    mode:'lines',
+    name:'Your estimated response',
+    line:{color:'#ffbd6e',width:2,dash:'dash'}
+   }
+  ],
+  base('Time (s)','Sensor output'),
+  config
+ );
+}
+
+$('checkButton').addEventListener('click',checkAnswer);
+
+$('newButton').addEventListener('click',makeNewChallenge);
+
+$('hintButton').addEventListener('click',()=>{
+ const hint=challenge.type==='first'
+  ? (challenge.signal==='step'
+     ? 'First-order step response: K is the final output value. At t = τ, the output reaches 63.2% of K.'
+     : 'For a first-order sine response, the phase lag is φ = −tan⁻¹(ωτ). The output amplitude is K / √(1 + (ωτ)²).')
+  : (challenge.signal==='step'
+     ? 'For an underdamped second-order step response, overshoot depends on ζ. Use the peak time to estimate ωₙ.'
+     : 'For a second-order sine response, compare the output amplitude and phase lag with the given input frequency.');
+
+ $('hintText').textContent=hint;
+ $('hintText').hidden=false;
+});
+
+if(typeof Plotly!=='undefined') {
+ makeNewChallenge();
+} else {
+ $('sensorPlot').textContent=
+  'Plotly.js did not load. Connect to the internet and refresh.';
+}
+</script>
+</body>
+</html>
