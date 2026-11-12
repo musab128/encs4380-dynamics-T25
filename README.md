@@ -9,9 +9,10 @@ Team Members
 - Member 4: Ahmad Bazzar 1230575
 
 ## Modules
-- **Module 1 – First-Order Time Response:** Step/ramp inputs, K and τ sliders, 63.2% at τ, approximately 95% at 3τ, steady-state ramp error, logarithmic error fraction, prediction question, validation.
-- **Module 2 – First-Order Frequency Response:** Input/output sinusoidal steady state, amplitude ratio and phase lag, magnitude and phase Bode plots, cutoff at ω = 1/τ, dynamic-error calculator, prediction question, validation.
-- **Module 3 – Second-Order Response:** Mass-spring-damper controls m, b, k, three damping regimes, rise/peak/settling times, overshoot, s-plane poles, live A/B matrices and eigenvalues, phase-plane trajectory, prediction question, validation.
+- Module 1 – First-Order Time Response: Step/ramp inputs, K and τ sliders, 63.2% at τ, approximately 95% at 3τ, steady-state ramp error, logarithmic error fraction, prediction question, validation.
+- Module 2 – First-Order Frequency Response: Input/output sinusoidal steady state, amplitude ratio and phase lag, magnitude and phase Bode plots, cutoff at ω = 1/τ, dynamic-error calculator, prediction question, validation.
+- Module 3 – Second-Order Response: Mass-spring-damper controls m, b, k, three damping regimes, rise/peak/settling times, overshoot, s-plane poles, live A/B matrices and eigenvalues, phase-plane trajectory, prediction question, validation.
+- Module 4 – Guess the Sensor: Students observe a sensor's noisy response to an unknown input and estimate its dynamic parameters. They enter their guesses, check their answers, receive a score, and compare their predicted response with the actual response using a graph.
 
 Live Website
 
