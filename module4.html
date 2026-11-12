@@ -464,11 +464,14 @@ $('hintButton').addEventListener('click',()=>{
  $('hintText').hidden=false;
 });
 
-if(typeof Plotly!=='undefined') {
- makeNewChallenge();
+if (typeof Plotly !== 'undefined') {
+    makeNewChallenge();
 } else {
- $('sensorPlot').textContent=
-  'Plotly.js did not load. Connect to the internet and refresh.';
+    $('sensorPlot').textContent =
+        'Plotly.js did not load. Connect to the internet and refresh.';
+
+    $('comparisonPlot').textContent =
+        'Plotly.js did not load. Connect to the internet and refresh.';
 }
 </script>
 </body>
