@@ -424,7 +424,7 @@ function drawComparison(guess1,guess2) {
  const actual=times.map(t=>trueResponse(c,t));
  const guessed=times.map(t=>guessedResponse(c,t));
 
- Plotly.react(
+  Plotly.react(
   'comparisonPlot',
   [
    {
@@ -444,7 +444,7 @@ function drawComparison(guess1,guess2) {
   ],
   base('Time (s)','Sensor output'),
   config
- );
+ ).then(()=>Plotly.Plots.resize('comparisonPlot'));
 }
 
 $('checkButton').addEventListener('click',checkAnswer);
