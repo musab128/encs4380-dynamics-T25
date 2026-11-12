@@ -301,7 +301,7 @@ function makeNewChallenge() {
   '<div class="metric"><span>Second parameter</span><strong>—</strong></div>'+
   '<div class="metric"><span>Your points</span><strong>—</strong></div>';
 
- $('comparisonPlot').innerHTML='';
+ Plotly.purge('comparisonPlot');
 
  $('plotNote').textContent=
   challenge.signal==='step'
