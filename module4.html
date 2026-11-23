@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Module 4 | Guess the Sensor</title><link rel="stylesheet" href="shared.css">
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+<style>
+.challenge-grid{display:grid;grid-template-columns:minmax(280px,360px) minmax(0,1fr);gap:16px}
+.form-group{margin:14px 0}.form-group label{display:block;font-weight:600;margin-bottom:5px}.form-group small{display:block;color:#a9b7cb;margin-top:3px}
+.form-group input{max-width:100%}.bigscore{font-size:36px;color:#42dbbe;font-weight:800}.statbar{display:flex;gap:12px;flex-wrap:wrap}.statbar>div{border:1px solid #324057;border-radius:10px;padding:10px 16px;flex:1;min-width:115px}.statbar span{color:#a9b7cb;font-size:13px;display:block}
+.secondary{background:#17283d}.hide{display:none!important}.attention{background:#13362f;padding:12px;border-radius:9px;border:1px solid #278678}
+@media(max-width:850px){.challenge-grid{grid-template-columns:1fr}}
+</style></head><body><main>
+<nav class="nav"><a href="index.html">Home</a><a href="module1.html">Module 1</a><a href="module2.html">Module 2</a><a href="module3.html">Module 3</a><a class="active" href="module4.html">Module 4</a><a href="p1.html">P1</a><a href="p2.html">P2</a></nav>
+<header><div class="eyebrow">ENCS4380 · DYNAMIC CHARACTERISTICS TOOLKIT</div><h1>Module 4: Guess the Sensor</h1><p>Reverse-engineer a hidden first- or second-order sensor from a noisy response. Estimate its parameters, then reveal the true curve.</p></header>
+<section class="card"><div class="statbar"><div><span>Rounds completed</span><strong id="roundCount">0</strong></div><div><span>Total points</span><strong id="totalPoints">0</strong></div><div><span>Average score</span><strong id="average">—</strong></div></div></section>
+<div class="challenge-grid"><section class="card"><h2>Unknown sensor</h2><div id="description" class="attention" aria-live="polite"></div>
+<p class="hint">The curve includes small simulated measurement noise. Your task is to recover the hidden sensor parameters.</p>
+<div id="firstInputs" class="hide"><div class="form-group"><label for="guessK">Estimated gain K</label><input id="guessK" type="number" min="0.01" max="10" step="0.01" value="1"><small>For a step, K is the final output (input step amplitude = 1).</small></div><div class="form-group"><label for="guessTau">Estimated time constant τ (s)</label><input id="guessTau" type="number" min="0.01" max="30" step="0.01" value="1"><small>Use 63.2% of final value, or sine attenuation and phase.</small></div></div>
+<div id="secondInputs" class="hide"><div class="form-group"><label for="guessZ">Estimated damping ratio ζ</label><input id="guessZ" type="number" min="0.01" max="4" step="0.01" value="0.5"><small>Underdamped overshoot depends on ζ.</small></div><div class="form-group"><label for="guessW">Estimated natural frequency ωₙ (rad/s)</label><input id="guessW" type="number" min="0.05" max="40" step="0.05" value="2"><small>Use peak time and the estimated damping ratio.</small></div></div>
+<div class="row"><button id="submitGuess">Reveal & score</button><button class="secondary" id="newSensor">New sensor</button><button class="secondary" id="showHint">Show hint</button></div><div class="result" id="hint" aria-live="polite">Make your estimate before revealing the sensor.</div>
+<div class="result hide" id="feedback" aria-live="polite"></div></section>
+<section class="card"><h2>Measured response</h2><div id="responsePlot" class="plot" role="img" aria-label="Noisy sensor response curve"></div><p class="hint" id="plotHelp">Blue points = noisy measurements. The actual and estimated curves appear only after you submit a guess.</p></section></div>
+<section class="card"><h2>How to estimate parameters</h2><div class="two"><div><h3>First order — step / sine</h3><p>Step: <code>y(t) = K(1 − exp(−t/τ))</code>. Read final value for K, then find the time to reach 63.2% of it for τ.</p><p>Sine: <code>M = 1/√(1+(ωτ)²)</code>, <code>φ = −atan(ωτ)</code>. Phase lag and attenuation reveal τ and K.</p></div><div><h3>Second order — step</h3><p>For an underdamped sensor: <code>PO = 100 exp(−πζ/√(1−ζ²))</code>; <code>tₚ = π/(ωₙ√(1−ζ²))</code>.</p><p>For critical or overdamped responses, use the overall speed and absence of overshoot to estimate parameters.</p></div></div><p class="hint">Scoring: each parameter earns up to 50 points. An error of 10% or less earns all 50 for that parameter. Larger relative errors earn fewer points. The running score lasts for this page session.</p></section>
+</main><script>
+'use strict';
+const $=id=>document.getElementById(id);
+const plotCfg={responsive:true,displaylogo:false,modeBarButtonsToRemove:['lasso2d','select2d']};
+let round=null,rounds=0,total=0,finished=false;
+const N=320;
+const rnd=(a,b)=>a+(b-a)*Math.random();
+const choice=a=>a[Math.floor(Math.random()*a.length)];
+const format=(x,d=3)=>Number(x).toFixed(d);
+function gauss(){let u=1-Math.random(),v=Math.random();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v)}
+function secondStep(t,z,w){
+ if(t<=0)return 0;
+ if(z<1-1e-6){const b=Math.sqrt(1-z*z),wd=w*b;return 1-Math.exp(-z*w*t)*(Math.cos(wd*t)+(z/b)*Math.sin(wd*t));}
+ if(Math.abs(z-1)<1e-6)return 1-Math.exp(-w*t)*(1+w*t);
+ const d=Math.sqrt(z*z-1),r1=-w*(z-d),r2=-w*(z+d);
+ return 1+(r2*Math.exp(r1*t)-r1*Math.exp(r2*t))/(r1-r2);
+}
+function f1(t,k,tau){return k*(1-Math.exp(-t/tau))}
+function sine(t,k,tau,w){return k/Math.hypot(1,w*tau)*Math.sin(w*t-Math.atan(w*tau))}
+function response(r,t,guess){
+ if(r.kind==='first') {let k=guess?.k??r.k,tau=guess?.tau??r.tau;return r.input==='step'?f1(t,k,tau):sine(t,k,tau,r.omega)}
+ return secondStep(t,guess?.z??r.z,guess?.wn??r.wn);
+}
+function makeRound(){
+ const kind=choice(['first','second']);
+ if(kind==='first'){
+   const input=choice(['step','step','sine']);
+   const r={kind,input,k:rnd(.6,2.0),tau:rnd(.45,3.2)};
+   if(input==='sine') r.omega=rnd(.7,2.5);
+   r.duration=input==='step'?6*r.tau:5*2*Math.PI/r.omega;
+   return r;
+ }
+ const z=choice([rnd(.18,.8),rnd(.85,.99),1,rnd(1.08,1.45)]),wn=rnd(1.2,4.5);
+ return {kind,z,wn,duration:Math.min(45,Math.max(6,10/(Math.max(.2,z)*wn),12/wn))};
+}
+function draw(guess){
+ if(typeof Plotly==='undefined'){$('responsePlot').textContent='Plotly.js could not load. Connect to the internet and refresh.';return;}
+ const r=round;
+ let traces=[{x:r.ts,y:r.ys,name:'Noisy measurements',mode:'markers',marker:{color:'#96b1ff',size:4,opacity:.72}}];
+ if(r.input==='sine')traces.push({x:r.ts,y:r.ts.map(t=>Math.sin(r.omega*t)),name:'Known input sin(ωt)',mode:'lines',line:{color:'#ffbd6e',width:1.5,dash:'dot'}});
+ if(guess){traces.push({x:r.ts,y:r.ts.map(t=>response(r,t)),name:'True response',mode:'lines',line:{color:'#42dbbe',width:3}});traces.push({x:r.ts,y:r.ts.map(t=>response(r,t,guess)),name:'Your estimated response',mode:'lines',line:{color:'#ffbd6e',width:2.5,dash:'dash'}})}
+ Plotly.react('responsePlot',traces,{paper_bgcolor:'#162238',plot_bgcolor:'#162238',font:{color:'#ecf3ff',size:12},margin:{l:60,r:18,t:18,b:72},xaxis:{title:'Time (s)',gridcolor:'#34445a'},yaxis:{title:'Output y(t)',gridcolor:'#34445a'},legend:{orientation:'h',x:0,y:-.3},hovermode:'closest'},plotCfg);
+}
+function newRound(){round=makeRound();finished=false;let r=round;r.ts=Array.from({length:N},(_,i)=>i*r.duration/(N-1));const scale=r.kind==='first'?r.k:1;r.ys=r.ts.map(t=>response(r,t)+gauss()*.015*scale);
+ $('description').innerHTML=r.kind==='first'?`<strong>First-order sensor</strong><br>Input: ${r.input==='step'?'unit step (amplitude 1)':`sine wave at ω = ${format(r.omega,2)} rad/s (amplitude 1)`}<br>Unknown: K and τ`:`<strong>Second-order sensor</strong><br>Input: unit step (final output = 1)<br>Unknown: ζ and ωₙ`;
+ $('firstInputs').classList.toggle('hide',r.kind!=='first');$('secondInputs').classList.toggle('hide',r.kind!=='second');
+ $('submitGuess').disabled=false;$('hint').textContent='Make your estimate before revealing the sensor.';$('feedback').classList.add('hide');$('plotHelp').textContent='Blue dots are noisy measurements; hidden and guessed curves will appear after submitting.';draw(null);
+}
+function scoreParam(a,b){const error=Math.abs(a-b)/Math.abs(b);return {error,points:error<=.10?50:Math.max(0,50*(1-(error-.10)/.90))};}
+function submit(){if(finished)return;const r=round;let entries,guess;
+ if(r.kind==='first'){guess={k:Number($('guessK').value),tau:Number($('guessTau').value)};entries=[['K',guess.k,r.k],['τ',guess.tau,r.tau]]}
+ else{guess={z:Number($('guessZ').value),wn:Number($('guessW').value)};entries=[['ζ',guess.z,r.z],['ωₙ',guess.wn,r.wn]]}
+ if(entries.some(([name,val])=>!Number.isFinite(val)||val<=0)|| (r.kind==='first'&&(!$('guessK').value||!$('guessTau').value)) ||(r.kind==='second'&&(!$('guessZ').value||!$('guessW').value))){$('hint').textContent='Please enter positive numeric estimates for both parameters.';return;}
+ let gained=0;const details=entries.map(([name,est,actual])=>{const s=scoreParam(est,actual);gained+=s.points;return `<div class="test"><div><strong>${name}</strong><div class="hint">Your guess: ${format(est)} · True: ${format(actual)} · Relative error: ${format(s.error*100,1)}%</div></div><strong class="${s.error<=.1?'pass':'fail'}">${format(s.points,1)}/50</strong></div>`});
+ finished=true;rounds++;total+=gained;$('roundCount').textContent=rounds;$('totalPoints').textContent=format(total,1);$('average').textContent=format(total/rounds,1)+'/100';
+ $('feedback').innerHTML=`<h3>Round score: ${format(gained,1)} / 100</h3><div class="tests">${details.join('')}</div><p class="hint">Green = within 10% of the true parameter. Click New sensor to play again.</p>`;
+ $('feedback').classList.remove('hide');$('submitGuess').disabled=true;$('plotHelp').textContent='Green line = actual sensor; orange dashed line = your estimated sensor; blue dots = noisy measurements.';draw(guess);
+}
+function hint(){const r=round;$('hint').textContent=r.kind==='second'?'Look for overshoot: if you see it, ζ < 1. Use the peak height to estimate ζ, then the time to the peak to estimate ωₙ. If there is no overshoot, ζ may be around 1 or greater.':r.input==='step'?'The plateau gives K. Find when the response first reaches about 63.2% of that plateau; the corresponding time is τ.':'Compare the input sine to the measured output. The delay angle φ = −atan(ωτ) reveals τ; then the output amplitude divided by M gives K.'}
+$('submitGuess').addEventListener('click',submit);$('newSensor').addEventListener('click',newRound);$('showHint').addEventListener('click',hint);newRound();
+</script><script src="navigation.js"></script></body></html>
