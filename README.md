@@ -2,6 +2,7 @@ ENCS4380 – Dynamic Characteristics & PID Control Interactive Toolkit
 Project Description
 This project is an interactive website that helps students understand the dynamic characteristics of sensors using sliders and graphs. Homework 2 extends it with PID control pages, so Homework 1 and Homework 2 are integrated into one static GitHub Pages website.
 
+
 Team Members
 - Member 1: Aws Abdallah 1230619 (Modules 1, 2, P1, P2, P3)
 - Member 2: Musab Farhat 1230093 (Modules 1, 2, P1, P2, P3)
